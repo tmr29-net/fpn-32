@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>32bit浮動小数点数 練習ツール</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            background-color: #fff;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            max-width: 600px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            font-size: 22px;
+            margin-bottom: 20px;
+        }
+        
+        /* モード・難易度共通セレクター */
+        .selector-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .selector-label {
+            font-size: 12px;
+            font-weight: bold;
+            color: #7f8c8d;
+            margin-bottom: 4px;
+        }
+        .tab {
+            flex: 1;
+            padding: 8px;
+            text-align: center;
+            background-color: #e0e0e0;
+            color: #555;
+            font-weight: bold;
+            font-size: 13px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+        /* アクティブ状態の色 */
+        .tab.active-10to2 { background-color: #3498db; color: white; }
+        .tab.active-2to10 { background-color: #e67e22; color: white; }
+        .tab.active-level { background-color: #2c3e50; color: white; }
+
+        .question-box {
+            background-color: #eef2f7;
+            padding: 20px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+            border-left: 5px solid #ccc;
+            word-break: break-all;
+        }
+        .container:has(.active-10to2) .question-box { border-left-color: #3498db; }
+        .container:has(.active-2to10) .question-box { border-left-color: #e67e22; }
+
+        .ui-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #34495e;
+        }
+        
+        .ieee-inputs {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .input-sub {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+        
+        input[type="text"] {
+            padding: 10px;
+            font-size: 16px;
+            border: 2px solid #bdc3c7;
+            border-radius: 6px;
+            font-family: monospace;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        input[type="text"]:focus, input[type="text"].active-input {
+            border-color: #3498db;
+            outline: none;
+            background-color: #f7faff;
+        }
+        .container:has(.active-2to10) input[type="text"].active-input {
+            border-color: #e67e22;
+        }
+
+        /* テンキー */
+        .keypad {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-top: 15px;
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+        .key {
+            padding: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+            user-select: none;
+            box-shadow: 0 2px 0 #ccc;
+        }
+        .key:active {
+            transform: translateY(2px);
+            box-shadow: none;
+        }
+        .key.disabled {
+            opacity: 0.2;
+            cursor: not-allowed;
+        }
+        .key.special { background: #e0e0e0; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 15px;
+        }
+        .btn:hover { background-color: #27ae60; }
+        .btn-check { background-color: #3498db; }
+        .btn-check:hover { background-color: #2980b9; }
+        .container:has(.active-2to10) .btn-check { background-color: #e67e22; }
+        .container:has(.active-2to10) .btn-check:hover { background-color: #d35400; }
+        
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 6px;
+            display: none;
+            font-weight: bold;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        
+        .explanation {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #555;
+            line-height: 1.6;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>32bit浮動小数点数 練習</h1>
+    
+    <div class="selector-label">変換モード</div>
+    <div class="selector-group">
+        <div id="tab-10to2" class="tab active-10to2" onclick="switchMode('10to2')">10進数 ➔ 浮動小数点数</div>
+        <div id="tab-2to10" class="tab" onclick="switchMode('2to10')">浮動小数点数 ➔ 10進数</div>
+    </div>
+
+    <div class="selector-label">難易度</div>
+    <div class="selector-group">
+        <div id="lvl-easy" class="tab" onclick="switchLevel('easy')">かんたん</div>
+        <div id="lvl-normal" class="tab active-level" onclick="switchLevel('normal')">ふつう</div>
+        <div id="lvl-hard" class="tab" onclick="switchLevel('hard')">むずかしい</div>
+    </div>
+
+    <div class="question-box" id="question">問題読み込み中...</div>
+    
+    <div class="ui-group" id="ui-to-binary" style="display:none;">
+        <label>解答入力（各欄をタップして入力）</label>
+        <div class="ieee-inputs">
+            <div class="input-sub" style="flex: 1.2;">
+                <label>符号(1b)</label>
+                <input type="text" id="ans-sign" readonly placeholder="0">
+            </div>
+            <div class="input-sub" style="flex: 2.3;">
+                <label>指数(8b)</label>
+                <input type="text" id="ans-exp" readonly placeholder="00000000">
+            </div>
+            <div class="input-sub" style="flex: 4.5;">
+                <label>仮数(23b/省略可)</label>
+                <input type="text" id="ans-mant" readonly placeholder="000...">
+            </div>
+        </div>
+    </div>
+
+    <div class="ui-group" id="ui-to-decimal" style="display:none;">
+        <label>解答入力（10進数で入力）</label>
+        <input type="text" id="ans-decimal" readonly placeholder="-12.625">
+    </div>
+
+    <div class="keypad" id="keyboard">
+        <div class="key num-key" onclick="pressKey('7')">7</div>
+        <div class="key num-key" onclick="pressKey('8')">8</div>
+        <div class="key num-key" onclick="pressKey('9')">9</div>
+        <div class="key special" onclick="pressKey('BACK')">BS</div>
+        
+        <div class="key num-key" onclick="pressKey('4')">4</div>
+        <div class="key num-key" onclick="pressKey('5')">5</div>
+        <div class="key num-key" onclick="pressKey('6')">6</div>
+        <div class="key special" onclick="pressKey('CLEAR')">C</div>
+        
+        <div class="key num-key" onclick="pressKey('1')">1</div>
+        <div class="key num-key" onclick="pressKey('2')">2</div>
+        <div class="key num-key" onclick="pressKey('3')">3</div>
+        <div class="key" id="key-minus" onclick="pressKey('-')">-</div>
+        
+        <div class="key num-key" style="grid-column: span 2;" onclick="pressKey('0')">0</div>
+        <div class="key" id="key-dot" onclick="pressKey('.')">.</div>
+        <div></div>
+    </div>
+
+    <button class="btn btn-check" id="btn-check" onclick="checkAnswer()">答え合わせ</button>
+    <button class="btn" id="btn-next" onclick="nextQuestion()" style="display:none;">次の問題へ</button>
+
+    <div id="result-box" class="result"></div>
+    <div id="explanation-box" class="explanation" style="display:none;"></div>
+</div>
+
+<script>
+let currentMode = "10to2"; 
+let currentLevel = "normal";
+let currentTargetNum = 0;
+let correctSign = "", correctExp = "", correctMant = "";
+let activeInputId = "ans-sign"; 
+
+// 難易度ごとの小数部定義
+const decimalsNormal = [0, 0.5, 0.25, 0.75, 0.125, 0.375, 0.625, 0.875];
+const decimalsHard = [
+    0, 0.5, 0.25, 0.75, 0.125, 0.375, 0.625, 0.875,
+    0.0625, 0.1875, 0.3125, 0.4375, 0.5625, 0.6875, 0.8125, 0.9375
+];
+
+document.getElementById("ans-sign").onclick = () => setActiveInput("ans-sign");
+document.getElementById("ans-exp").onclick = () => setActiveInput("ans-exp");
+document.getElementById("ans-mant").onclick = () => setActiveInput("ans-mant");
+
+function setActiveInput(id) {
+    if (currentMode !== "10to2") return;
+    document.getElementById(activeInputId).classList.remove("active-input");
+    activeInputId = id;
+    document.getElementById(activeInputId).classList.add("active-input");
+}
+
+function switchMode(mode) {
+    if (currentMode === mode) return;
+    currentMode = mode;
+    
+    const tab10to2 = document.getElementById("tab-10to2");
+    const tab2to10 = document.getElementById("tab-2to10");
+    if (currentMode === "10to2") {
+        tab10to2.className = "tab active-10to2";
+        tab2to10.className = "tab";
+    } else {
+        tab10to2.className = "tab";
+        tab2to10.className = "tab active-2to10";
+    }
+    generateQuestion();
+}
+
+function switchLevel(level) {
+    if (currentLevel === level) return;
+    currentLevel = level;
+    
+    document.getElementById("lvl-easy").classList.remove("active-level");
+    document.getElementById("lvl-normal").classList.remove("active-level");
+    document.getElementById("lvl-hard").classList.remove("active-level");
+    
+    document.getElementById(`lvl-${level}`).classList.add("active-level");
+    generateQuestion();
+}
+
+function generateQuestion() {
+    const sign = Math.random() < 0.5 ? 1 : -1;
+    let integerPart = 0;
+    let decimalPart = 0;
+    
+    if (currentLevel === "easy") {
+        integerPart = Math.floor(Math.random() * 10) + 1; // 1〜10
+        decimalPart = 0; // 小数なし
+    } else if (currentLevel === "normal") {
+        integerPart = Math.floor(Math.random() * 15) + 1; // 1〜15
+        decimalPart = decimalsNormal[Math.floor(Math.random() * decimalsNormal.length)];
+    } else if (currentLevel === "hard") {
+        integerPart = Math.floor(Math.random() * 240) + 15; // 15〜255 (指数が大きくなる)
+        decimalPart = decimalsHard[Math.floor(Math.random() * decimalsHard.length)];
+    }
+    
+    currentTargetNum = sign * (integerPart + decimalPart);
+    calculateIEEE754(currentTargetNum);
+    
+    const qBox = document.getElementById("question");
+    const numKeys = document.querySelectorAll(".num-key");
+    const keyDot = document.getElementById("key-dot");
+    const keyMinus = document.getElementById("key-minus");
+    
+    if (currentMode === "10to2") {
+        qBox.innerText = `問題：10進数「 ${currentTargetNum} 」を 32bit浮動小数点数 に変換せよ`;
+        document.getElementById("ui-to-binary").style.display = "block";
+        document.getElementById("ui-to-decimal").style.display = "none";
+        
+        numKeys.forEach(k => {
+            const val = k.innerText;
+            if (val !== '0' && val !== '1') k.classList.add("disabled");
+            else k.classList.remove("disabled");
+        });
+        keyDot.classList.add("disabled");
+        keyMinus.classList.add("disabled");
+        setActiveInput("ans-sign");
+    } else {
+        qBox.innerHTML = `問題：以下の32bit浮動小数点数を 10進数 に変換せよ<br><br><span style="font-family:monospace; font-size:16px; background:#fff; padding:4px 8px; border-radius:4px; border:1px solid #ccc;">${correctSign} ${correctExp} ${correctMant.substring(0,6)}...</span><br><span style="font-size:11px; color:#7f8c8d;">(省略部：${correctMant})</span>`;
+        document.getElementById("ui-to-binary").style.display = "none";
+        document.getElementById("ui-to-decimal").style.display = "block";
+        
+        numKeys.forEach(k => k.classList.remove("disabled"));
+        keyDot.classList.remove("disabled");
+        keyMinus.classList.remove("disabled");
+        activeInputId = "ans-decimal";
+    }
+    
+    document.getElementById("ans-sign").value = "";
+    document.getElementById("ans-exp").value = "";
+    document.getElementById("ans-mant").value = "";
+    document.getElementById("ans-decimal").value = "";
+    document.getElementById("result-box").style.display = "none";
+    document.getElementById("explanation-box").style.display = "none";
+    document.getElementById("btn-check").style.display = "block";
+    document.getElementById("btn-next").style.display = "none";
+}
+
+function calculateIEEE754(num) {
+    correctSign = num < 0 ? "1" : "0";
+    let absNum = Math.abs(num);
+    let binaryStr = absNum.toString(2);
+    
+    let dotIdx = binaryStr.indexOf('.');
+    let dotCurrentIdx = dotIdx !== -1 ? dotIdx : binaryStr.length;
+    let firstOneIdx = binaryStr.indexOf('1');
+    
+    let exponent = (firstOneIdx < dotCurrentIdx) ? (dotCurrentIdx - firstOneIdx - 1) : (dotCurrentIdx - firstOneIdx);
+    let biasedExp = exponent + 127;
+    
+    correctExp = biasedExp.toString(2).padStart(8, '0');
+    let pureDigits = binaryStr.replace('.', '');
+    let firstOneInPure = pureDigits.indexOf('1');
+    correctMant = pureDigits.substring(firstOneInPure + 1).padEnd(23, '0');
+}
+
+function pressKey(key) {
+    let input = document.getElementById(activeInputId);
+    
+    if (key === 'CLEAR') {
+        input.value = "";
+        return;
+    }
+    if (key === 'BACK') {
+        input.value = input.value.slice(0, -1);
+        return;
+    }
+    
+    if (currentMode === "10to2") {
+        if (key !== '0' && key !== '1') return; 
+        if (activeInputId === "ans-sign" && input.value.length >= 1) {
+            setActiveInput("ans-exp");
+            input = document.getElementById(activeInputId);
+        }
+        if (activeInputId === "ans-exp" && input.value.length >= 8) {
+            setActiveInput("ans-mant");
+            input = document.getElementById(activeInputId);
+        }
+        if (activeInputId === "ans-mant" && input.value.length >= 23) return;
+    }
+    
+    input.value += key;
+}
+
+function checkAnswer() {
+    let isCorrect = false;
+    let absNum = Math.abs(currentTargetNum);
+    let expActual = parseInt(correctExp, 2) - 127;
+    
+    if (currentMode === "10to2") {
+        let userSign = document.getElementById("ans-sign").value.trim();
+        let userExp = document.getElementById("ans-exp").value.trim();
+        let userMant = document.getElementById("ans-mant").value.trim().padEnd(23, '0');
+        isCorrect = (userSign === correctSign) && (userExp === correctExp) && (userMant === correctMant);
+    } else {
+        let userDec = parseFloat(document.getElementById("ans-decimal").value.trim());
+        isCorrect = (userDec === currentTargetNum);
+    }
+    
+    let resultBox = document.getElementById("result-box");
+    resultBox.className = isCorrect ? "result success" : "result error";
+    resultBox.innerText = isCorrect ? "正解です！素晴らしい！" : "残念、不正解です。";
+    resultBox.style.display = "block";
+    
+    let explanation = `
+        <strong>【解説】</strong><br>
+        ・<strong>符号部:</strong> ${correctSign} （${currentTargetNum < 0 ? '負の数なので1' : '正の数なので0'}）<br>
+        ・<strong>2進数化:</strong> ${absNum.toString(2)}<br>
+        ・<strong>正規化:</strong> 1.${correctMant.substring(0, Math.max(1, absNum.toString(2).replace('.','').length - 1))}... × 2<sup>${expActual}</sup><br>
+        ・<strong>指数部:</strong> ${expActual} + 127 = ${expActual + 127} ➔ 2進数で <code>${correctExp}</code><br>
+        ・<strong>仮数部:</strong> 小数点以下の <code>${correctMant.substring(0, 8)}...</code>（残りは0埋めで23桁）<br><br>
+        <strong>正解のデータ形式:</strong><br>
+        [符号] <code>${correctSign}</code> [指数] <code>${correctExp}</code> [仮数] <code>${correctMant}</code><br>
+        <strong>10進数での値:</strong> <code>${currentTargetNum}</code>
+    `;
+    
+    let expBox = document.getElementById("explanation-box");
+    expBox.innerHTML = explanation;
+    expBox.style.display = "block";
+    
+    document.getElementById("btn-check").style.display = "none";
+    document.getElementById("btn-next").style.display = "block";
+}
+
+function nextQuestion() {
+    generateQuestion();
+}
+
+window.onload = generateQuestion;
+</script>
+
+</body>
+</html>
